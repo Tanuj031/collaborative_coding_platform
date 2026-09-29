@@ -1,0 +1,203 @@
+/* ==========================================================================
+   Landing Page Styles (src/pages/Landing.css)
+   Hero section, features grid, and footer layout.
+   ========================================================================== */
+
+.landing-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 70px);
+}
+
+/* Hero Section */
+.hero-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 5rem var(--space-lg) 4rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0.35rem 0.9rem;
+  background-color: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 9999px;
+  color: var(--primary-accent);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: var(--space-lg);
+}
+
+.hero-headline {
+  font-size: 3.25rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -1.2px;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+/* Gradient highlight on key headline text */
+.headline-gradient {
+  background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtext {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  max-width: 680px;
+  line-height: 1.6;
+  margin-bottom: var(--space-xl);
+}
+
+/* Call-to-action buttons group */
+.hero-cta-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.hero-cta-group .btn {
+  padding: 0.75rem 1.6rem;
+  font-size: 1rem;
+}
+
+/* Features Section */
+.features-section {
+  max-width: 1140px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 3rem var(--space-lg) 5rem;
+}
+
+.features-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.features-header h2 {
+  font-size: 2rem;
+  margin-bottom: var(--space-xs);
+}
+
+.features-header p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+/* Features 4-Card CSS Grid */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+}
+
+.feature-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: transform var(--transition-base), border-color var(--transition-base);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.feature-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--primary-accent);
+  font-size: 1.35rem;
+  margin-bottom: var(--space-md);
+}
+
+.feature-card h3 {
+  font-size: 1.15rem;
+  margin-bottom: var(--space-xs);
+  color: var(--text-primary);
+}
+
+.feature-card p {
+  font-size: 0.925rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Simple Footer */
+.landing-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  padding: var(--space-lg) var(--space-lg);
+}
+
+.footer-content {
+  max-width: 1140px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.footer-links {
+  display: flex;
+  gap: var(--space-lg);
+}
+
+.footer-links a {
+  color: var(--text-secondary);
+}
+
+.footer-links a:hover {
+  color: var(--text-primary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hero-headline {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-headline {
+    font-size: 2rem;
+  }
+
+  .hero-section {
+    padding-top: 3rem;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+}

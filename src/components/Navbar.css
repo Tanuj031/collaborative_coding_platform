@@ -1,0 +1,182 @@
+/* ==========================================================================
+   Navbar Component Styles (src/components/Navbar.css)
+   Flexbox layout, responsive hamburger menu, and dark theme navigation.
+   ========================================================================== */
+
+/* Main Header Container */
+.navbar-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  background-color: rgba(11, 15, 25, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Inner Navigation Flexbox Wrapper */
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.85rem var(--space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Brand Logo */
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+
+.logo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--primary-accent), #06b6d4);
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.logo-text {
+  letter-spacing: -0.5px;
+}
+
+.logo-accent {
+  color: var(--primary-accent);
+}
+
+/* Desktop Navigation Menu */
+.navbar-desktop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  list-style: none;
+}
+
+.nav-link {
+  color: var(--text-secondary);
+  font-size: 0.925rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  transition: color var(--transition-fast);
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+/* Auth Buttons Group */
+.nav-auth-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Hamburger Toggle Button (Mobile) */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  cursor: pointer;
+}
+
+.hamburger-line {
+  width: 100%;
+  height: 2px;
+  background-color: var(--text-primary);
+  border-radius: 2px;
+  transition: all var(--transition-base);
+}
+
+/* Hamburger Active Transform Animation */
+.hamburger-btn.open .hamburger-line:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.hamburger-btn.open .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-btn.open .hamburger-line:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* Mobile Dropdown Menu */
+.navbar-mobile-menu {
+  display: none;
+}
+
+/* Responsive Media Query for Mobile (max-width: 768px) */
+@media (max-width: 768px) {
+  .navbar-desktop {
+    display: none;
+  }
+
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .navbar-mobile-menu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    background-color: var(--surface-color);
+    border-top: 1px solid var(--border-color);
+    padding: var(--space-lg);
+  }
+
+  .mobile-links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    list-style: none;
+  }
+
+  .mobile-nav-link {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+
+  .mobile-nav-link:hover {
+    color: var(--text-primary);
+  }
+
+  .mobile-auth-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+  }
+
+  .mobile-auth-group .btn {
+    width: 100%;
+  }
+}

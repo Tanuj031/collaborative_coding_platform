@@ -1,0 +1,59 @@
+/* ==========================================================================
+   NotFound Page Styles (src/pages/NotFound.css)
+   Polished 404 error page with dark theme aesthetics and navigation buttons.
+   ========================================================================== */
+
+.notfound-container {
+  min-height: calc(100vh - 70px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+}
+
+.notfound-card {
+  width: 100%;
+  max-width: 520px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.notfound-code {
+  font-size: 5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -2px;
+  background: linear-gradient(135deg, var(--accent-rose), #f97316);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: var(--space-md);
+}
+
+.notfound-card h1 {
+  font-size: 1.85rem;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.notfound-desc {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: var(--space-xl);
+}
+
+.notfound-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.notfound-actions .btn {
+  padding: 0.65rem 1.4rem;
+}

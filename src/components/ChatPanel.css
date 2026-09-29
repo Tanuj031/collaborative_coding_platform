@@ -1,0 +1,200 @@
+/* ==========================================================================
+   ChatPanel Component Styles (src/components/ChatPanel.css)
+   Collapsible right sidebar with real-time messages list and input.
+   ========================================================================== */
+
+.chat-panel-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--surface-color);
+  border-left: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: width var(--transition-base);
+}
+
+/* Header with toggle collapse button */
+.chat-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem var(--space-md);
+  background-color: rgba(11, 15, 25, 0.7);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.chat-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chat-badge {
+  font-size: 0.7rem;
+  background-color: rgba(59, 130, 246, 0.2);
+  color: var(--primary-accent);
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.chat-toggle-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-toggle-btn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* Scrollable Messages Stream */
+.chat-messages-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  list-style: none;
+}
+
+/* Empty chat state */
+.chat-empty-hint {
+  margin: auto;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Base message row */
+.chat-message-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+}
+
+/* Own messages (aligned right) */
+.message-own {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.message-own .message-bubble {
+  background-color: var(--primary-accent);
+  color: #ffffff;
+  border-bottom-right-radius: 2px;
+}
+
+.message-own .message-meta {
+  justify-content: flex-end;
+}
+
+/* Other users' messages (aligned left) */
+.message-other {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.message-other .message-bubble {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-bottom-left-radius: 2px;
+}
+
+/* Message Meta: User Name and Timestamp */
+.message-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: 3px;
+  font-size: 0.75rem;
+}
+
+.message-sender-name {
+  font-weight: 600;
+}
+
+.message-timestamp {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+/* Bubble Text Container */
+.message-bubble {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Chat Input Footer Form */
+.chat-input-form {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background-color: rgba(11, 15, 25, 0.7);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.chat-input-field {
+  flex: 1;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.chat-send-btn {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+/* Collapsed Chat View */
+.chat-panel-collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  width: 44px;
+  height: 100%;
+  background-color: var(--surface-color);
+  border-left: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.chat-collapsed-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.chat-collapsed-btn:hover {
+  color: var(--primary-accent);
+}
+
+.chat-vertical-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-top: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}

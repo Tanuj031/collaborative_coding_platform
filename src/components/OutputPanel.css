@@ -1,0 +1,114 @@
+/* ==========================================================================
+   OutputPanel Component Styles (src/components/OutputPanel.css)
+   Collapsible bottom terminal console for simulated code execution output.
+   ========================================================================== */
+
+.output-panel-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--surface-color);
+  border-top: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+/* Header bar with actions and collapse toggle */
+.output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem var(--space-md);
+  background-color: rgba(11, 15, 25, 0.75);
+  border-bottom: 1px solid var(--border-color);
+  user-select: none;
+  flex-shrink: 0;
+  height: 38px;
+}
+
+.output-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.output-status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent-emerald);
+}
+
+.output-status-indicator.running {
+  background-color: var(--accent-amber);
+  animation: pulseGlow 1s infinite alternate;
+}
+
+@keyframes pulseGlow {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+
+.output-title-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
+  color: var(--text-primary);
+}
+
+.output-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.output-action-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.output-action-btn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.output-clear-btn:hover {
+  border-color: var(--border-color);
+}
+
+/* Terminal Console View */
+.output-body {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  background-color: #0b0f19;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.output-content {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.output-running-text {
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.output-prompt-symbol {
+  color: var(--primary-accent);
+  font-weight: 700;
+  margin-right: 6px;
+}

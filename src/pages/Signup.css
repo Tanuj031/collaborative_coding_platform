@@ -1,0 +1,90 @@
+/* ==========================================================================
+   Signup Page Styles (src/pages/Signup.css)
+   Centered auth registration card and input states.
+   ========================================================================== */
+
+.signup-page-wrapper {
+  min-height: calc(100vh - 70px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+}
+
+.signup-card {
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.signup-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.signup-header h1 {
+  font-size: 1.85rem;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.signup-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.signup-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  text-align: left;
+}
+
+.signup-form .form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.signup-form .input-error {
+  border-color: var(--accent-rose) !important;
+}
+
+.signup-form .input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
+
+.signup-form .error-text {
+  font-size: 0.8rem;
+  color: var(--accent-rose);
+  margin-top: 2px;
+}
+
+.signup-submit-btn {
+  margin-top: var(--space-sm);
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+}
+
+.signup-footer-prompt {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.signup-footer-prompt a {
+  font-weight: 500;
+  margin-left: 0.25rem;
+}
