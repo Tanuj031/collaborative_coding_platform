@@ -1,14 +1,9 @@
-// Room Page (Part 3 Polish): Full collaborative coding environment
-// Includes responsive slide-over drawers for participants and chat on mobile (<768px),
-// Monaco editor, output console, and lifted state management.
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+// Room Page: Real-time collaborative coding environment with sandboxed JS execution, polling and debounced auto-save
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import {
-  rooms as initialRooms,
-  users as mockUsers,
-  messages as initialMessages
-} from '../data/mockData';
+import api from '../api/api';
+import { AuthContext } from '../context/AuthContext';
 
 // Subcomponents
 import UserList from '../components/UserList';
@@ -16,83 +11,281 @@ import ChatPanel from '../components/ChatPanel';
 import OutputPanel from '../components/OutputPanel';
 import './Room.css';
 
-// Starter templates for code editor
 const STARTER_CODES = {
-  javascript: `// JavaScript Collaborative Environment
-function greet(name) {
-  return \`Hello, \${name}! Welcome to CollabCode.\`;
-}
+  javascript: `// JavaScript Collaborative Environment\nfunction greet(name) {\n  return \`Hello, \${name}! Welcome to CollabCode.\`;\n}\n\nconsole.log(greet("Developer"));\n`,
+  python: `# Python Collaborative Environment\ndef greet(name):\n    return f"Hello, {name}! Welcome to CollabCode."\n\nprint(greet("Developer"))\n`,
+  cpp: `// C++ Collaborative Environment\n#include <iostream>\n#include <string>\n\nint main() {\n    std::string name = "Developer";\n    std::cout << "Hello, " << name << "! Welcome to CollabCode." << std::endl;\n    return 0;\n}\n`
+};
 
-console.log(greet("Developer"));
-`,
-  python: `# Python Collaborative Environment
-def greet(name):
-    return f"Hello, {name}! Welcome to CollabCode."
+// Generates the sandboxed iframe HTML document
+const createSandboxHtml = (userCode) => {
+  const safeCode = userCode.replace(/<\/script>/gi, '<\\/script>');
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+  (function() {
+    function serializeArg(arg) {
+      if (arg === null) return 'null';
+      if (arg === undefined) return 'undefined';
+      if (typeof arg === 'function') return '[Function: ' + (arg.name || 'anonymous') + ']';
+      if (typeof arg === 'symbol') return arg.toString();
+      if (arg instanceof Error) return arg.stack || arg.toString();
+      if (typeof arg === 'object') {
+        try {
+          return JSON.stringify(arg, null, 2);
+        } catch (e) {
+          return Object.prototype.toString.call(arg);
+        }
+      }
+      return String(arg);
+    }
 
-print(greet("Developer"))
-`,
-  cpp: `// C++ Collaborative Environment
-#include <iostream>
-#include <string>
+    function dispatchConsole(type, args) {
+      try {
+        var formatted = Array.prototype.slice.call(args).map(serializeArg).join(' ');
+        window.parent.postMessage({
+          source: 'collabcode-sandbox',
+          type: type,
+          text: formatted
+        }, '*');
+      } catch (err) {}
+    }
 
-int main() {
-    std::string name = "Developer";
-    std::cout << "Hello, " << name << "! Welcome to CollabCode." << std::endl;
-    return 0;
-}
-`
+    // Override standard console methods
+    console.log = function() { dispatchConsole('log', arguments); };
+    console.warn = function() { dispatchConsole('warn', arguments); };
+    console.error = function() { dispatchConsole('error', arguments); };
+
+    // Catch global unhandled runtime errors
+    window.onerror = function(message, source, lineno, colno, error) {
+      var errString = error && error.stack ? error.stack : (message + ' (line ' + lineno + ')');
+      dispatchConsole('error', [errString]);
+      return true;
+    };
+
+    // Catch unhandled promise rejections
+    window.addEventListener('unhandledrejection', function(event) {
+      var reason = event.reason;
+      var errString = reason && reason.stack ? reason.stack : String(reason);
+      dispatchConsole('error', ['Unhandled Promise Rejection: ' + errString]);
+    });
+
+    try {
+      ${safeCode}
+    } catch (err) {
+      dispatchConsole('error', [err && err.stack ? err.stack : String(err)]);
+    } finally {
+      window.parent.postMessage({
+        source: 'collabcode-sandbox',
+        type: 'done'
+      }, '*');
+    }
+  })();
+  <\/script>
+</body>
+</html>`;
 };
 
 export default function Room() {
-  // 1. URL Route parameter
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
-  // Find matching room details from mockData (if any)
-  const currentRoom = initialRooms.find((r) => r.id === id);
-
-  // 2. Lifted State Management
-  // Code editor content
-  const [code, setCode] = useState(
-    currentRoom ? currentRoom.code : STARTER_CODES.javascript
-  );
-
-  // Active programming language
-  const [language, setLanguage] = useState(
-    currentRoom ? currentRoom.language : 'javascript'
-  );
-
-  // Monaco Editor theme ('vs-dark' or 'light')
+  const [room, setRoom] = useState(null);
+  const [code, setCode] = useState('');
+  const [language, setLanguage] = useState('javascript');
+  const [isRoomLoading, setIsRoomLoading] = useState(true);
   const [editorTheme, setEditorTheme] = useState('vs-dark');
-
-  // Clipboard copy state feedback
   const [isCopied, setIsCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('');
 
-  // Output terminal execution state
-  const [output, setOutput] = useState(
-    'Console initialized. Click "▶ Run" to execute code.'
-  );
+  const [output, setOutput] = useState('Console initialized. Click "▶ Run" to execute code.');
   const [isRunning, setIsRunning] = useState(false);
   const [isOutputCollapsed, setIsOutputCollapsed] = useState(false);
 
-  // Chat panel state
   const [isChatOpen, setIsChatOpen] = useState(true);
-  const [messages, setMessages] = useState(() => {
-    const roomMsgs = initialMessages.filter((m) => m.roomId === id);
-    return roomMsgs.length > 0 ? roomMsgs : initialMessages;
-  });
+  const [messages, setMessages] = useState([]);
 
-  // Mobile drawer states (< 768px)
   const [isUsersDrawerOpen, setIsUsersDrawerOpen] = useState(false);
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
 
-  // Current user representation for own messages
-  const currentUser = { id: 'u1', name: 'Alex Johnson', color: '#3b82f6' };
+  // Refs for tracking code & execution timeouts
+  const codeRef = useRef(code);
+  codeRef.current = code;
+  const initialRoomCodeRef = useRef('');
+  const isInitialLoad = useRef(true);
 
-  // 3. Handlers
+  const sandboxIframeRef = useRef(null);
+  const runnerTimeoutRef = useRef(null);
+  const runnerSettleTimeoutRef = useRef(null);
+  const logsAccumulatorRef = useRef([]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (runnerTimeoutRef.current) clearTimeout(runnerTimeoutRef.current);
+      if (runnerSettleTimeoutRef.current) clearTimeout(runnerSettleTimeoutRef.current);
+    };
+  }, []);
+
+  // 1. Fetch Room Details & Messages
+  const fetchRoomData = async () => {
+    try {
+      const res = await api.get(`/rooms/${id}`);
+      const roomData = res.data;
+      setRoom(roomData);
+      const roomLang = roomData.language || 'javascript';
+      setLanguage(roomLang);
+
+      if (isInitialLoad.current) {
+        const initialCode =
+          roomData.code !== undefined && roomData.code !== null && roomData.code !== ''
+            ? roomData.code
+            : STARTER_CODES[roomLang] || '';
+        setCode(initialCode);
+        initialRoomCodeRef.current = initialCode;
+        isInitialLoad.current = false;
+      }
+    } catch (err) {
+      console.error('Error fetching room:', err);
+    } finally {
+      setIsRoomLoading(false);
+    }
+  };
+
+  const fetchMessages = async () => {
+    try {
+      const res = await api.get(`/rooms/${id}/messages`);
+      const formatted = res.data.map((m) => ({
+        id: m._id,
+        roomId: m.room,
+        userId: m.sender?._id || m.sender,
+        userName: m.sender?.name || 'User',
+        userColor: '#3b82f6',
+        text: m.text,
+        timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }));
+      setMessages(formatted);
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchRoomData();
+    fetchMessages();
+  }, [id]);
+
+  // Polling every 3 seconds for room updates and chat messages
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      fetchMessages();
+      api.get(`/rooms/${id}`).then((res) => {
+        setRoom(res.data);
+      }).catch(() => { });
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [id]);
+
+  // Listen for postMessage from sandboxed iframe
+  useEffect(() => {
+    const handleSandboxMessage = (event) => {
+      if (!event.data || event.data.source !== 'collabcode-sandbox') return;
+
+      const { type, text } = event.data;
+
+      if (type === 'done') {
+        // Wait a short settle window to capture any immediate async Promise / setTimeout logs
+        if (runnerSettleTimeoutRef.current) clearTimeout(runnerSettleTimeoutRef.current);
+        runnerSettleTimeoutRef.current = setTimeout(() => {
+          setIsRunning(false);
+          if (runnerTimeoutRef.current) clearTimeout(runnerTimeoutRef.current);
+          setOutput((prev) => {
+            if (!prev || !prev.trim()) {
+              return '(Code executed successfully with no console output)';
+            }
+            return prev;
+          });
+        }, 700);
+        return;
+      }
+
+      let line = text;
+      if (type === 'error') {
+        line = `[ERROR] ${text}`;
+      } else if (type === 'warn') {
+        line = `[WARN] ${text}`;
+      }
+
+      logsAccumulatorRef.current.push(line);
+      setOutput(logsAccumulatorRef.current.join('\n'));
+    };
+
+    window.addEventListener('message', handleSandboxMessage);
+    return () => {
+      window.removeEventListener('message', handleSandboxMessage);
+    };
+  }, []);
+
+  // Save code and language API call
+  const saveCodeToBackend = async (codeToSave, langToSave) => {
+    try {
+      setIsSaving(true);
+      await api.put(`/rooms/${id}`, {
+        code: codeToSave,
+        language: langToSave || language
+      });
+      setSaveStatus('Saved');
+      setTimeout(() => setSaveStatus(''), 2000);
+    } catch (err) {
+      setSaveStatus('Save failed');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Debounced auto-save (2 seconds after typing stops)
+  useEffect(() => {
+    if (isInitialLoad.current || isRoomLoading) return;
+    setSaveStatus('Saving...');
+    const timer = setTimeout(() => {
+      saveCodeToBackend(code, language);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [code]);
+
+  // Checks whether the user hasn't edited the initial snippet
+  const isUntouchedStarter = (currentCode) => {
+    if (!currentCode || !currentCode.trim()) return true;
+    const trimmed = currentCode.trim();
+    if (trimmed === initialRoomCodeRef.current.trim()) return true;
+    return Object.values(STARTER_CODES).some((s) => s.trim() === trimmed);
+  };
+
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
     setLanguage(newLang);
-    setCode(STARTER_CODES[newLang] || '// Start typing...');
+
+    let newCode = code;
+    if (isUntouchedStarter(code)) {
+      newCode = STARTER_CODES[newLang] || '';
+      setCode(newCode);
+      initialRoomCodeRef.current = newCode;
+    }
+
+    saveCodeToBackend(newCode, newLang);
   };
 
   const toggleEditorTheme = () => {
@@ -100,58 +293,95 @@ export default function Room() {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    navigator.clipboard.writeText(room?.roomCode || window.location.href);
     setIsCopied(true);
     setTimeout(() => {
       setIsCopied(false);
     }, 2000);
   };
 
+  // Run Code logic: Sandboxed iframe for JS, simulated output with note for Python/C++
   const handleRunCode = () => {
     if (isRunning) return;
-
-    if (isOutputCollapsed) {
-      setIsOutputCollapsed(false);
-    }
+    if (isOutputCollapsed) setIsOutputCollapsed(false);
 
     setIsRunning(true);
-    setOutput('Compiling and executing...');
-
-    setTimeout(() => {
-      setIsRunning(false);
-
-      if (language === 'python') {
-        setOutput('Hello, Developer! Welcome to CollabCode.\n\n[Process completed successfully in 120ms with exit code 0]');
-      } else if (language === 'cpp') {
-        setOutput('Hello, Developer! Welcome to CollabCode.\n\n[Binary built and executed in 45ms with exit code 0]');
-      } else {
-        setOutput('Hello, Developer! Welcome to CollabCode.\n\n[Process exited with status 0 in 75ms]');
-      }
-    }, 1000);
-  };
-
-  const handleClearOutput = () => {
     setOutput('');
+
+    // Clear previous execution timers
+    if (runnerTimeoutRef.current) clearTimeout(runnerTimeoutRef.current);
+    if (runnerSettleTimeoutRef.current) clearTimeout(runnerSettleTimeoutRef.current);
+
+    // 1. Python Simulation
+    if (language === 'python') {
+      setTimeout(() => {
+        setIsRunning(false);
+        setOutput(
+          'Execution for this language is simulated.\n\nTarget: 9\nIndices: [0, 1]\nValues: 2 + 7 = 9\n\n[Process completed successfully in 120ms with exit code 0]'
+        );
+      }, 700);
+      return;
+    }
+
+    // 2. C++ Simulation
+    if (language === 'cpp') {
+      setTimeout(() => {
+        setIsRunning(false);
+        setOutput(
+          'Execution for this language is simulated.\n\nHello, Developer! Welcome to CollabCode.\n\n[Binary built and executed in 45ms with exit code 0]'
+        );
+      }, 700);
+      return;
+    }
+
+    // 3. Real JavaScript Execution in sandboxed iframe
+    logsAccumulatorRef.current = [];
+
+    // Reset iframe sandbox
+    if (sandboxIframeRef.current) {
+      sandboxIframeRef.current.srcdoc = '';
+    }
+
+    // 5-second timeout to stop infinite loops
+    runnerTimeoutRef.current = setTimeout(() => {
+      if (sandboxIframeRef.current) {
+        sandboxIframeRef.current.srcdoc = '';
+      }
+      setIsRunning(false);
+      setOutput((prev) => {
+        const timeoutMsg = '\n⚠️ [Error: Execution timed out after 5 seconds (possible infinite loop detected)]';
+        return prev ? prev + timeoutMsg : timeoutMsg.trim();
+      });
+    }, 5000);
+
+    // Inject code into sandbox
+    const sandboxHtml = createSandboxHtml(code);
+    setTimeout(() => {
+      if (sandboxIframeRef.current) {
+        sandboxIframeRef.current.srcdoc = sandboxHtml;
+      }
+    }, 50);
   };
 
-  const handleSendMessage = (text) => {
-    const now = new Date();
-    const formattedTime = now.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    const newMessage = {
-      id: `msg-${Date.now()}`,
-      roomId: id,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userColor: currentUser.color,
-      text: text,
-      timestamp: formattedTime
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
+  const handleSendMessage = async (text) => {
+    try {
+      const res = await api.post(`/rooms/${id}/messages`, { text });
+      const newMsg = {
+        id: res.data._id,
+        roomId: res.data.room,
+        userId: res.data.sender?._id || user?.id,
+        userName: res.data.sender?.name || user?.name || 'You',
+        userColor: '#3b82f6',
+        text: res.data.text,
+        timestamp: new Date(res.data.createdAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      };
+      setMessages((prev) => [...prev, newMsg]);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
 
   const closeMobileDrawers = () => {
@@ -159,13 +389,12 @@ export default function Room() {
     setIsChatDrawerOpen(false);
   };
 
-  const displayName = currentRoom ? currentRoom.name : `Room ${id}`;
+  const displayName = room?.name || `Room ${id}`;
 
   return (
     <div
-      className={`room-layout ${!isChatOpen ? 'chat-collapsed' : ''} ${
-        isOutputCollapsed ? 'output-collapsed' : ''
-      }`}
+      className={`room-layout ${!isChatOpen ? 'chat-collapsed' : ''} ${isOutputCollapsed ? 'output-collapsed' : ''
+        }`}
     >
       {/* 1. Top Toolbar */}
       <header className="room-toolbar">
@@ -176,12 +405,28 @@ export default function Room() {
 
           <div className="toolbar-room-title">
             <h1 title={displayName}>{displayName}</h1>
-            <span className="toolbar-room-id">#{id}</span>
+            <span className="toolbar-room-id">Code: {room?.roomCode || id}</span>
+            {saveStatus && (
+              <span style={{ fontSize: '0.75rem', color: '#38bdf8', marginLeft: '0.5rem' }}>
+                {saveStatus}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="toolbar-controls">
-          {/* Mobile Drawer Trigger Buttons (visible only <768px) */}
+          {/* Save Code Button */}
+          <button
+            type="button"
+            className="btn btn-outline toolbar-btn"
+            onClick={() => saveCodeToBackend(code, language)}
+            disabled={isSaving}
+            title="Save code now"
+          >
+            💾 Save
+          </button>
+
+          {/* Mobile Drawer Trigger Buttons */}
           <button
             type="button"
             className="btn btn-outline toolbar-btn mobile-drawer-btn"
@@ -213,7 +458,7 @@ export default function Room() {
             onChange={handleLanguageChange}
             aria-label="Select programming language"
           >
-            <option value="javascript">JS</option>
+            <option value="javascript">JavaScript</option>
             <option value="python">Python</option>
             <option value="cpp">C++</option>
           </select>
@@ -228,14 +473,14 @@ export default function Room() {
             {editorTheme === 'vs-dark' ? '☀️' : '🌙'}
           </button>
 
-          {/* Copy Link */}
+          {/* Copy Room Code */}
           <button
             type="button"
             className={`btn btn-outline toolbar-btn ${isCopied ? 'copy-success-badge' : ''}`}
             onClick={handleCopyLink}
-            title="Copy Link"
+            title="Copy Room Join Code"
           >
-            {isCopied ? '✓' : '🔗'}
+            {isCopied ? '✓' : '🔑'}
           </button>
 
           {/* Run Code */}
@@ -250,7 +495,7 @@ export default function Room() {
         </div>
       </header>
 
-      {/* 2. Left Sidebar: Active Collaborators (Slide-over drawer on mobile) */}
+      {/* 2. Left Sidebar: Collaborators */}
       <aside
         className={`room-sidebar-area ${isUsersDrawerOpen ? 'drawer-open' : ''}`}
       >
@@ -265,28 +510,43 @@ export default function Room() {
             ×
           </button>
         </div>
-        <UserList users={mockUsers} />
+        <UserList users={room?.members || []} />
       </aside>
 
       {/* 3. Center: Monaco Editor */}
       <main className="room-editor-area">
-        <Editor
-          height="100%"
-          language={language === 'cpp' ? 'cpp' : language}
-          theme={editorTheme}
-          value={code}
-          onChange={(newVal) => setCode(newVal || '')}
-          options={{
-            fontSize: 14,
-            fontFamily: "'Fira Code', 'Courier New', monospace",
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-            lineNumbers: 'on',
-            renderWhitespace: 'selection'
-          }}
-        />
+        {isRoomLoading ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: '#94a3b8'
+            }}
+          >
+            Loading workspace...
+          </div>
+        ) : (
+          <Editor
+            key={language}
+            height="100%"
+            language={language === 'cpp' ? 'cpp' : language}
+            theme={editorTheme}
+            value={code}
+            onChange={(newVal) => setCode(newVal || '')}
+            options={{
+              fontSize: 14,
+              fontFamily: "'Fira Code', 'Courier New', monospace",
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              lineNumbers: 'on',
+              renderWhitespace: 'selection'
+            }}
+          />
+        )}
       </main>
 
       {/* 4. Bottom: Output Console Panel */}
@@ -294,13 +554,13 @@ export default function Room() {
         <OutputPanel
           output={output}
           isRunning={isRunning}
-          onClear={handleClearOutput}
+          onClear={() => setOutput('')}
           isCollapsed={isOutputCollapsed}
           onToggleCollapse={() => setIsOutputCollapsed((prev) => !prev)}
         />
       </section>
 
-      {/* 5. Right: Chat Panel (Slide-over drawer on mobile) */}
+      {/* 5. Right: Chat Panel */}
       <aside
         className={`room-chat-area ${isChatDrawerOpen ? 'drawer-open' : ''}`}
       >
@@ -318,7 +578,7 @@ export default function Room() {
         <ChatPanel
           messages={messages}
           onSendMessage={handleSendMessage}
-          currentUserId={currentUser.id}
+          currentUserId={user?.id || user?._id}
           isOpen={isChatOpen}
           onToggle={() => setIsChatOpen((prev) => !prev)}
         />
@@ -332,6 +592,14 @@ export default function Room() {
           aria-hidden="true"
         />
       )}
+
+      {/* Sandboxed iframe runner for executing JavaScript safely */}
+      <iframe
+        ref={sandboxIframeRef}
+        sandbox="allow-scripts"
+        style={{ display: 'none' }}
+        title="collabcode-sandbox-runner"
+      />
     </div>
   );
 }

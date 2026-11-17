@@ -1,4 +1,4 @@
-// OutputPanel component: Simulated execution console at bottom of Room workspace
+// OutputPanel component: Execution console at bottom of Room workspace
 // Features execution indicator, clear output capability, and collapse toggle
 import React from 'react';
 import './OutputPanel.css';
@@ -49,15 +49,20 @@ export default function OutputPanel({
       {/* Terminal Body (shown only when expanded) */}
       {!isCollapsed && (
         <div className="output-body">
-          {isRunning ? (
+          {isRunning && !output ? (
             <div className="output-running-text">
               <span className="output-prompt-symbol">$</span>
-              <span>Running code simulation...</span>
+              <span>Executing script in sandboxed runner...</span>
             </div>
           ) : (
             <pre className="output-content">
               <span className="output-prompt-symbol">$</span>
               {output || 'No output to display. Click "▶ Run" to execute.'}
+              {isRunning && (
+                <span className="output-running-text" style={{ display: 'inline', marginLeft: '10px' }}>
+                  ⏳ [Running...]
+                </span>
+              )}
             </pre>
           )}
         </div>

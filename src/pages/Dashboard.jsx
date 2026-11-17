@@ -1,106 +1,120 @@
-// Dashboard Page: Lists active coding rooms, allows creating new rooms and joining by room code
-import React, { useState, useEffect } from 'react';
+// Dashboard Page: Lists real active coding rooms from backend API
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { rooms as initialRooms } from '../data/mockData';
+import api from '../api/api';
+import { AuthContext } from '../context/AuthContext';
 import RoomCard from '../components/RoomCard';
 import './Dashboard.css';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
-  // 1. Rooms state initialized with mockData
-  const [roomsList, setRoomsList] = useState(initialRooms);
-
-  // Initial render loading state to show skeleton effect
+  const [roomsList, setRoomsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
 
-  useEffect(() => {
-    // Simulate initial data fetching delay
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 2. Modal display toggles
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 
-  // 3. Create Room form state
   const [newRoomData, setNewRoomData] = useState({
     name: '',
-    language: 'javascript',
-    description: ''
+    language: 'javascript'
   });
   const [createError, setCreateError] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
-  // 4. Join by code form state
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [joinError, setJoinError] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
 
-  // Handle Create Room submit
-  const handleCreateRoom = (e) => {
+  const fetchRooms = async () => {
+    try {
+      setIsLoading(true);
+      setFetchError('');
+      const res = await api.get('/rooms');
+      setRoomsList(res.data);
+    } catch (err) {
+      setFetchError('Failed to load rooms. Please check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const handleCreateRoom = async (e) => {
     e.preventDefault();
-
-    // Basic validation
     if (!newRoomData.name.trim()) {
       setCreateError('Room name is required.');
       return;
     }
 
-    // Default template code snippets based on selected language
     const starterSnippets = {
       javascript: '// Start coding in JavaScript...\nconsole.log("Hello, CollabCode!");\n',
       python: '# Start coding in Python...\nprint("Hello, CollabCode!")\n',
       cpp: '// Start coding in C++...\n#include <iostream>\n\nint main() {\n    std::cout << "Hello, CollabCode!" << std::endl;\n    return 0;\n}\n'
     };
 
-    // Create new room object
-    const createdRoom = {
-      id: `room-${Date.now().toString().slice(-4)}`,
-      name: newRoomData.name.trim(),
-      language: newRoomData.language,
-      description: newRoomData.description.trim() || 'Collaborative coding session.',
-      createdBy: 'You',
-      participantsCount: 1,
-      createdAt: new Date().toISOString(),
-      code: starterSnippets[newRoomData.language] || '// Welcome to your new room\n'
-    };
-
-    // Prepend new room to state to instantly show it at the front of the grid
-    setRoomsList((prev) => [createdRoom, ...prev]);
-
-    // Reset and close modal
-    setNewRoomData({ name: '', language: 'javascript', description: '' });
-    setCreateError('');
-    setIsCreateModalOpen(false);
+    try {
+      setIsCreating(true);
+      setCreateError('');
+      const payload = {
+        name: newRoomData.name.trim(),
+        language: newRoomData.language,
+        code: starterSnippets[newRoomData.language] || '// Welcome\n'
+      };
+      const res = await api.post('/rooms', payload);
+      setRoomsList((prev) => [res.data, ...prev]);
+      setNewRoomData({ name: '', language: 'javascript' });
+      setIsCreateModalOpen(false);
+      navigate(`/room/${res.data._id}`);
+    } catch (err) {
+      setCreateError(err.response?.data?.message || 'Failed to create room.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  // Handle Join by Room Code submit
-  const handleJoinWithCode = (e) => {
+  const handleJoinWithCode = async (e) => {
     e.preventDefault();
-
     if (!roomCodeInput.trim()) {
-      setJoinError('Please enter a valid room code.');
+      setJoinError('Please enter a 6-character room code.');
       return;
     }
 
-    const targetCode = roomCodeInput.trim();
-    setIsJoinModalOpen(false);
-    setRoomCodeInput('');
-    setJoinError('');
+    try {
+      setIsJoining(true);
+      setJoinError('');
+      const res = await api.post('/rooms/join', {
+        roomCode: roomCodeInput.trim()
+      });
+      setIsJoinModalOpen(false);
+      setRoomCodeInput('');
+      navigate(`/room/${res.data.roomId}`);
+    } catch (err) {
+      setJoinError(err.response?.data?.message || 'Invalid room code.');
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
-    // Navigate to the target room route
-    navigate(`/room/${targetCode}`);
+  const handleDeleteRoom = async (roomId) => {
+    try {
+      await api.delete(`/rooms/${roomId}`);
+      setRoomsList((prev) => prev.filter((r) => (r._id || r.id) !== roomId));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete room.');
+    }
   };
 
   return (
     <div className="dashboard-container">
-      {/* 1. Header with Welcome Message and Action Buttons */}
       <div className="dashboard-header">
         <div className="dashboard-title-area">
-          <h1>Welcome back, Developer 👋</h1>
+          <h1>Welcome back, {user?.name || 'Developer'} 👋</h1>
           <p>Collaborate in active sessions or launch a new real-time room.</p>
         </div>
 
@@ -122,7 +136,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 2. Room Grid, Loading Skeletons, or Empty State */}
+      {fetchError && (
+        <div style={{ color: '#ef4444', marginBottom: '1rem' }}>
+          {fetchError} <button onClick={fetchRooms}>Retry</button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="rooms-grid" aria-label="Loading rooms">
           {[1, 2, 3].map((n) => (
@@ -145,14 +164,19 @@ export default function Dashboard() {
       ) : roomsList.length > 0 ? (
         <div className="rooms-grid">
           {roomsList.map((room) => (
-            <RoomCard key={room.id} room={room} />
+            <RoomCard
+              key={room._id || room.id}
+              room={room}
+              currentUserId={user?.id || user?._id}
+              onDelete={handleDeleteRoom}
+            />
           ))}
         </div>
       ) : (
         <div className="rooms-empty-state">
           <span className="empty-icon">📂</span>
           <h3>No Active Rooms Found</h3>
-          <p>There are no live rooms right now. Create one to get started!</p>
+          <p>You haven't created or joined any rooms yet.</p>
           <button
             type="button"
             className="btn btn-primary"
@@ -163,7 +187,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 3. "Create Room" Modal */}
+      {/* "Create Room" Modal */}
       {isCreateModalOpen && (
         <div className="modal-overlay" onClick={() => setIsCreateModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -180,7 +204,6 @@ export default function Dashboard() {
             </div>
 
             <form onSubmit={handleCreateRoom} className="modal-form">
-              {/* Room Name */}
               <div className="form-group">
                 <label htmlFor="room-name" className="form-label">
                   Room Name
@@ -189,7 +212,7 @@ export default function Dashboard() {
                   id="room-name"
                   type="text"
                   className="input"
-                  placeholder="e.g. React Hooks Deep Dive"
+                  placeholder="e.g. React & Express Fullstack"
                   value={newRoomData.name}
                   onChange={(e) => {
                     setNewRoomData({ ...newRoomData, name: e.target.value });
@@ -200,7 +223,6 @@ export default function Dashboard() {
                 {createError && <span className="modal-error">{createError}</span>}
               </div>
 
-              {/* Language Selection */}
               <div className="form-group">
                 <label htmlFor="room-language" className="form-label">
                   Primary Language
@@ -219,23 +241,6 @@ export default function Dashboard() {
                 </select>
               </div>
 
-              {/* Description */}
-              <div className="form-group">
-                <label htmlFor="room-desc" className="form-label">
-                  Description (Optional)
-                </label>
-                <input
-                  id="room-desc"
-                  type="text"
-                  className="input"
-                  placeholder="What is this session focused on?"
-                  value={newRoomData.description}
-                  onChange={(e) =>
-                    setNewRoomData({ ...newRoomData, description: e.target.value })
-                  }
-                />
-              </div>
-
               <div className="modal-footer">
                 <button
                   type="button"
@@ -244,8 +249,8 @@ export default function Dashboard() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Launch Room
+                <button type="submit" className="btn btn-primary" disabled={isCreating}>
+                  {isCreating ? 'Launching...' : 'Launch Room'}
                 </button>
               </div>
             </form>
@@ -253,7 +258,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 4. "Join with Code" Modal */}
+      {/* "Join with Code" Modal */}
       {isJoinModalOpen && (
         <div className="modal-overlay" onClick={() => setIsJoinModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -272,13 +277,13 @@ export default function Dashboard() {
             <form onSubmit={handleJoinWithCode} className="modal-form">
               <div className="form-group">
                 <label htmlFor="room-code-input" className="form-label">
-                  Enter Room Code
+                  Enter 6-Character Room Code
                 </label>
                 <input
                   id="room-code-input"
                   type="text"
                   className="input"
-                  placeholder="e.g. room-101"
+                  placeholder="e.g. A1B2C3"
                   value={roomCodeInput}
                   onChange={(e) => {
                     setRoomCodeInput(e.target.value);
@@ -297,8 +302,8 @@ export default function Dashboard() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Join Session
+                <button type="submit" className="btn btn-primary" disabled={isJoining}>
+                  {isJoining ? 'Joining...' : 'Join Session'}
                 </button>
               </div>
             </form>

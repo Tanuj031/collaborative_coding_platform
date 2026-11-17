@@ -1,20 +1,23 @@
-// RoomCard component: Displays a summary card for an active coding room
+// RoomCard component: Displays a summary card for an active coding room with delete option for owner
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RoomCard.css';
 
-export default function RoomCard({ room }) {
-  // Navigation hook to open the selected room
+export default function RoomCard({ room, currentUserId, onDelete }) {
   const navigate = useNavigate();
 
-  // Navigate to this room's workspace
   const handleJoin = (e) => {
-    // Prevent double triggers if user clicks directly on the button inside card
     e.stopPropagation();
-    navigate(`/room/${room.id}`);
+    navigate(`/room/${room._id || room.id}`);
   };
 
-  // Helper to map programming language to badge CSS class
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete "${room.name}"?`)) {
+      onDelete(room._id || room.id);
+    }
+  };
+
   const getLanguageClass = (language) => {
     switch (language?.toLowerCase()) {
       case 'python':
@@ -29,15 +32,18 @@ export default function RoomCard({ room }) {
     }
   };
 
+  const isOwner =
+    currentUserId &&
+    (room.owner?._id === currentUserId || room.owner === currentUserId);
+
   return (
     <div
       className="card room-card"
-      onClick={() => navigate(`/room/${room.id}`)}
+      onClick={() => navigate(`/room/${room._id || room.id}`)}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && navigate(`/room/${room.id}`)}
+      onKeyDown={(e) => e.key === 'Enter' && navigate(`/room/${room._id || room.id}`)}
     >
-      {/* Header with Title and Language Badge */}
       <div className="room-card-header">
         <h3 className="room-name">{room.name}</h3>
         <span className={`language-badge ${getLanguageClass(room.language)}`}>
@@ -45,25 +51,36 @@ export default function RoomCard({ room }) {
         </span>
       </div>
 
-      {/* Brief Room Description */}
-      <p className="room-description">
-        {room.description || 'Live pair programming session.'}
+      <p className="room-description" style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+        Code: <strong style={{ color: '#38bdf8' }}>{room.roomCode}</strong>
       </p>
 
-      {/* Card Footer: Participant Count & Join Action */}
       <div className="room-card-footer">
         <div className="room-members-count">
           <span className="members-icon">👥</span>
-          <span>{room.participantsCount || 1} online</span>
+          <span>{room.members?.length || 1} joined</span>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-primary room-join-btn"
-          onClick={handleJoin}
-        >
-          Join Room
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {isOwner && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ borderColor: '#ef4444', color: '#ef4444', padding: '0.3rem 0.6rem' }}
+              onClick={handleDelete}
+              title="Delete Room"
+            >
+              🗑️
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary room-join-btn"
+            onClick={handleJoin}
+          >
+            Open Room
+          </button>
+        </div>
       </div>
     </div>
   );

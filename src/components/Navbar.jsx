@@ -1,28 +1,22 @@
 // Navbar component: Responsive navigation bar using Flexbox
-// Shown on all pages except /room/:id (collaborative editor room)
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './Navbar.css';
 
 export default function Navbar() {
-  // Hook to track mobile menu toggle state (open / closed)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // Hook to inspect the active URL route
   const location = useLocation();
+  const { user, token, logout } = useContext(AuthContext);
 
-  // Hide the Navbar when inside a coding room (/room/:id)
-  // This allows the code editor to utilize the full viewport
   if (location.pathname.startsWith('/room/')) {
     return null;
   }
 
-  // Helper to toggle mobile menu open/close
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prevState) => !prevState);
   };
 
-  // Close mobile menu when a navigation item is clicked
   const handleNavLinkClick = () => {
     setIsMobileMenuOpen(false);
   };
@@ -36,25 +30,40 @@ export default function Navbar() {
           <span className="logo-text">Collab<span className="logo-accent">Code</span></span>
         </Link>
 
-        {/* Desktop Navigation Links (Flexbox) */}
+        {/* Desktop Navigation Links */}
         <nav className="navbar-desktop">
           <ul className="nav-links">
             <li>
               <Link to="/" className="nav-link">Home</Link>
             </li>
-            <li>
-              <Link to="/dashboard" className="nav-link">Dashboard</Link>
-            </li>
+            {token && (
+              <li>
+                <Link to="/dashboard" className="nav-link">Dashboard</Link>
+              </li>
+            )}
           </ul>
 
           {/* Action / Auth Buttons */}
           <div className="nav-auth-group">
-            <Link to="/login" className="btn btn-outline">Log In</Link>
-            <Link to="/signup" className="btn btn-primary">Sign Up</Link>
+            {token ? (
+              <>
+                <span style={{ color: '#94a3b8', fontSize: '0.9rem', marginRight: '0.5rem' }}>
+                  Hi, {user?.name || 'User'}
+                </span>
+                <button type="button" className="btn btn-outline" onClick={logout}>
+                  Log Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-outline">Log In</Link>
+                <Link to="/signup" className="btn btn-primary">Sign Up</Link>
+              </>
+            )}
           </div>
         </nav>
 
-        {/* Mobile Hamburger Toggle Button */}
+        {/* Mobile Hamburger Toggle */}
         <button
           type="button"
           className={`hamburger-btn ${isMobileMenuOpen ? 'open' : ''}`}
@@ -68,7 +77,7 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Collapsible Dropdown Menu */}
+      {/* Mobile Collapsible Dropdown */}
       {isMobileMenuOpen && (
         <div className="navbar-mobile-menu">
           <ul className="mobile-links">
@@ -77,20 +86,37 @@ export default function Navbar() {
                 Home
               </Link>
             </li>
-            <li>
-              <Link to="/dashboard" className="mobile-nav-link" onClick={handleNavLinkClick}>
-                Dashboard
-              </Link>
-            </li>
+            {token && (
+              <li>
+                <Link to="/dashboard" className="mobile-nav-link" onClick={handleNavLinkClick}>
+                  Dashboard
+                </Link>
+              </li>
+            )}
           </ul>
 
           <div className="mobile-auth-group">
-            <Link to="/login" className="btn btn-outline" onClick={handleNavLinkClick}>
-              Log In
-            </Link>
-            <Link to="/signup" className="btn btn-primary" onClick={handleNavLinkClick}>
-              Sign Up
-            </Link>
+            {token ? (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => {
+                  logout();
+                  handleNavLinkClick();
+                }}
+              >
+                Log Out
+              </button>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-outline" onClick={handleNavLinkClick}>
+                  Log In
+                </Link>
+                <Link to="/signup" className="btn btn-primary" onClick={handleNavLinkClick}>
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

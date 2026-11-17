@@ -1,14 +1,13 @@
-// Signup Page: User registration form with client-side validation
-// Uses React useState hook for controlled inputs and redirects to /dashboard upon submission
-import React, { useState } from 'react';
+// Signup Page: User registration form calling real backend API
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './Signup.css';
 
 export default function Signup() {
-  // Navigation hook to redirect users to Dashboard
   const navigate = useNavigate();
+  const { signup } = useContext(AuthContext);
 
-  // Controlled form state for registration fields
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,10 +15,10 @@ export default function Signup() {
     confirmPassword: ''
   });
 
-  // State to hold field validation error messages
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Generic controlled input change handler
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -27,40 +26,35 @@ export default function Signup() {
       [name]: value
     }));
 
-    // Clear error as user types
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
         [name]: ''
       }));
     }
+    setServerError('');
   };
 
-  // Perform form validation
   const validateForm = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // 1. Name validation
     if (!formData.name.trim()) {
       newErrors.name = 'Full name is required.';
     }
 
-    // 2. Email validation
     if (!formData.email.trim()) {
       newErrors.email = 'Email address is required.';
     } else if (!emailRegex.test(formData.email.trim())) {
       newErrors.email = 'Please enter a valid email address.';
     }
 
-    // 3. Password length validation (at least 6 characters)
     if (!formData.password) {
       newErrors.password = 'Password is required.';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters long.';
     }
 
-    // 4. Password confirmation match
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password.';
     } else if (formData.password !== formData.confirmPassword) {
@@ -70,34 +64,41 @@ export default function Signup() {
     return newErrors;
   };
 
-  // Form submit handler
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     const formValidationErrors = validateForm();
-
-    // Prevent navigation if any validation errors are present
     if (Object.keys(formValidationErrors).length > 0) {
       setErrors(formValidationErrors);
       return;
     }
 
-    // On valid submission, proceed to dashboard
-    navigate('/dashboard');
+    try {
+      setIsSubmitting(true);
+      setServerError('');
+      await signup(formData.name, formData.email, formData.password);
+      navigate('/dashboard');
+    } catch (err) {
+      setServerError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="signup-page-wrapper">
       <div className="signup-card">
-        {/* Header */}
         <div className="signup-header">
           <h1>Create an Account</h1>
           <p>Join CollabCode to write and share code in real time.</p>
         </div>
 
-        {/* Controlled Form */}
+        {serverError && (
+          <div style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem', fontSize: '0.875rem' }}>
+            {serverError}
+          </div>
+        )}
+
         <form className="signup-form" onSubmit={handleSubmit} noValidate>
-          {/* Full Name Field */}
           <div className="form-group">
             <label htmlFor="name" className="form-label">
               Full Name
@@ -114,7 +115,6 @@ export default function Signup() {
             {errors.name && <span className="error-text">{errors.name}</span>}
           </div>
 
-          {/* Email Address Field */}
           <div className="form-group">
             <label htmlFor="signup-email" className="form-label">
               Email Address
@@ -131,7 +131,6 @@ export default function Signup() {
             {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
-          {/* Password Field */}
           <div className="form-group">
             <label htmlFor="signup-password" className="form-label">
               Password
@@ -148,7 +147,6 @@ export default function Signup() {
             {errors.password && <span className="error-text">{errors.password}</span>}
           </div>
 
-          {/* Confirm Password Field */}
           <div className="form-group">
             <label htmlFor="confirmPassword" className="form-label">
               Confirm Password
@@ -167,13 +165,11 @@ export default function Signup() {
             )}
           </div>
 
-          {/* Submit Action */}
-          <button type="submit" className="btn btn-primary signup-submit-btn">
-            Create Account
+          <button type="submit" className="btn btn-primary signup-submit-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
 
-        {/* Switch Route Prompt */}
         <div className="signup-footer-prompt">
           Already have an account?
           <Link to="/login">Log in</Link>

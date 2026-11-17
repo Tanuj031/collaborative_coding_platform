@@ -1,0 +1,95 @@
+### CollabCode API Testing (REST Client / VS Code REST Client)
+
+@baseUrl = http://localhost:5000/api
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. User Signup
+# @name signup
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "testuser@example.com",
+  "password": "password123"
+}
+
+### 3. User Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "alex@example.com",
+  "password": "password123"
+}
+
+### Store Token from login
+@authToken = {{login.response.body.token}}
+
+### 4. Get Current Logged In User
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
+
+### 5. Get User Rooms
+GET {{baseUrl}}/rooms
+Authorization: Bearer {{authToken}}
+
+### 6. Create Room
+# @name createRoom
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Algorithm Practice Demo",
+  "language": "javascript",
+  "code": "// Start coding here\nconsole.log('Hello');"
+}
+
+### Store Room ID from creation
+@roomId = {{createRoom.response.body._id}}
+@roomCode = {{createRoom.response.body.roomCode}}
+
+### 7. Get Room by ID
+GET {{baseUrl}}/rooms/{{roomId}}
+Authorization: Bearer {{authToken}}
+
+### 8. Update Room (Code, Language, Name)
+PUT {{baseUrl}}/rooms/{{roomId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Updated Room Name",
+  "language": "python",
+  "code": "# Python updated code\nprint('Auto-saved code!')"
+}
+
+### 9. Join Room via 6-character roomCode
+POST {{baseUrl}}/rooms/join
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "roomCode": "{{roomCode}}"
+}
+
+### 10. Send Message to Room
+POST {{baseUrl}}/rooms/{{roomId}}/messages
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "text": "Hello team, this is an automated test message!"
+}
+
+### 11. Get Room Messages
+GET {{baseUrl}}/rooms/{{roomId}}/messages
+Authorization: Bearer {{authToken}}
+
+### 12. Delete Room (Owner only)
+DELETE {{baseUrl}}/rooms/{{roomId}}
+Authorization: Bearer {{authToken}}

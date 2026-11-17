@@ -1,23 +1,22 @@
-// Login Page: Controlled form with client-side validation
-// Navigates to /dashboard on successful submit
-import React, { useState } from 'react';
+// Login Page: Controlled form calling backend API
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './Login.css';
 
 export default function Login() {
-  // Navigation hook to redirect users after submission
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
 
-  // Controlled form state for inputs
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
 
-  // State to hold validation error messages
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Generic input change handler for controlled inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -25,28 +24,25 @@ export default function Login() {
       [name]: value
     }));
 
-    // Clear error for this field as soon as the user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
         [name]: ''
       }));
     }
+    setServerError('');
   };
 
-  // Validate form inputs against project requirements
   const validateForm = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // 1. Email validation
     if (!formData.email.trim()) {
       newErrors.email = 'Email address is required.';
     } else if (!emailRegex.test(formData.email.trim())) {
       newErrors.email = 'Please enter a valid email address.';
     }
 
-    // 2. Password validation
     if (!formData.password) {
       newErrors.password = 'Password is required.';
     } else if (formData.password.length < 6) {
@@ -56,34 +52,41 @@ export default function Login() {
     return newErrors;
   };
 
-  // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     const formValidationErrors = validateForm();
-
-    // If there are errors, set them in state and halt submission
     if (Object.keys(formValidationErrors).length > 0) {
       setErrors(formValidationErrors);
       return;
     }
 
-    // On valid submission, proceed to dashboard
-    navigate('/dashboard');
+    try {
+      setIsSubmitting(true);
+      setServerError('');
+      await login(formData.email, formData.password);
+      navigate('/dashboard');
+    } catch (err) {
+      setServerError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="auth-page-wrapper">
       <div className="auth-card">
-        {/* Header */}
         <div className="auth-header">
           <h1>Welcome Back</h1>
           <p>Sign in to resume your collaborative coding sessions.</p>
         </div>
 
-        {/* Controlled Form */}
+        {serverError && (
+          <div style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem', fontSize: '0.875rem' }}>
+            {serverError}
+          </div>
+        )}
+
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          {/* Email Field */}
           <div className="form-group">
             <label htmlFor="email" className="form-label">
               Email Address
@@ -100,7 +103,6 @@ export default function Login() {
             {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
-          {/* Password Field */}
           <div className="form-group">
             <label htmlFor="password" className="form-label">
               Password
@@ -110,20 +112,18 @@ export default function Login() {
               type="password"
               name="password"
               className={`input ${errors.password ? 'input-error' : ''}`}
-              placeholder="Enter your password (min. 6 characters)"
+              placeholder="Enter your password"
               value={formData.password}
               onChange={handleChange}
             />
             {errors.password && <span className="error-text">{errors.password}</span>}
           </div>
 
-          {/* Submit Action */}
-          <button type="submit" className="btn btn-primary auth-submit-btn">
-            Sign In
+          <button type="submit" className="btn btn-primary auth-submit-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        {/* Switch Route Prompt */}
         <div className="auth-footer-prompt">
           Don't have an account?
           <Link to="/signup">Create account</Link>
